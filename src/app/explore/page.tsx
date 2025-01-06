@@ -83,7 +83,7 @@ function ExploreBlogsContent({
         const url =
           process.env.NEXT_PUBLIC_API_URL ||
           "http://localhost:3000/api/blogs/1";
-        const response = await fetch(url, { next: { revalidate: 3000 } });
+        const response = await fetch(url, { cache: "no-cache" });
         const data = await response.json();
         setBlogPosts(data);
 
