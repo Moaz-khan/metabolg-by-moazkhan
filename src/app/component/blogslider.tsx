@@ -23,7 +23,7 @@ export default function BlogSlider() {
 
   React.useEffect(() => {
     const fetchBlogPosts = async () => {
-      const response = await fetchhttps://metabolg-by-moazkhan-k4gtvzwgl-muhammad-maazs-projects-461b9541.vercel.app/api/blogs/1");
+      const response = await fetchhttps:"https://metabolg-by-moazkhan-k4gtvzwgl-muhammad-maazs-projects-461b9541.vercel.app/api/blogs/1");
       const data = await response.json();
       setBlogPosts(data);
       setIsLoading(false);
