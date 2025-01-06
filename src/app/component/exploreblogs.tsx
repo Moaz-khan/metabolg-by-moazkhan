@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 
-// Define Post type
 interface Post {
   id: string;
   title: string;
@@ -15,20 +14,22 @@ interface Post {
 }
 
 export default function BlogCards() {
-  const [blogPosts, setBlogPosts] = useState<Post[]>([]); // Specify type for blogPosts state
-  const [currentIndex, setCurrentIndex] = useState(0); // Current page ka index
-  const [loading, setLoading] = useState(false); // Loading state
+  const [blogPosts, setBlogPosts] = useState<Post[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const postsPerPage = 3; // Kitni posts har page pe dikhani hain
+  const postsPerPage = 3;
 
   useEffect(() => {
     async function fetchBlogPosts() {
       setLoading(true);
-      const response = await fetch("http://localhost:3000/api/blogs/1");
+      const url =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/blogs/1";
+      const response = await fetch(url, { next: { revalidate: 300 } }); // Revalidate every 5 minutes
       const data = await response.json();
-      setBlogPosts(data.reverse()); // Reverse data taake nayi posts start mein dikhai den
-      setLoading(false); // Data load hone par loading ko false karenge
+      setBlogPosts(data.reverse());
+      setLoading(false);
     }
     fetchBlogPosts();
   }, []);
@@ -45,7 +46,7 @@ export default function BlogCards() {
     }
   };
 
-  const postsToShow = blogPosts.slice(0, (currentIndex + 1) * postsPerPage); // Show the posts for the current page
+  const postsToShow = blogPosts.slice(0, (currentIndex + 1) * postsPerPage);
 
   if (loading) {
     return (
@@ -83,7 +84,7 @@ export default function BlogCards() {
                   {post.description}
                 </div>
                 <button
-                  onClick={() => router.push(`/explore?blogId=${post.id}`)} // Redirect to the blog detail page
+                  onClick={() => router.push(`/explore?blogId=${post.id}`)}
                   className="absolute bottom-[40px] sm:bottom-[50px] left-[10px] text-sm font-semibold text-blue-500">
                   Read More
                 </button>

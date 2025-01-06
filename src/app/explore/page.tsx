@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import next from "next";
 
 interface BlogPost {
   id: string;
@@ -80,7 +81,10 @@ function ExploreBlogsContent({
   React.useEffect(() => {
     const fetchBlogPosts = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/blogs/1");
+        const url =
+          process.env.NEXT_PUBLIC_API_URL ||
+          "http://localhost:3000/api/blogs/1";
+        const response = await fetch(url, { next: { revalidate: 3000 } });
         const data = await response.json();
         setBlogPosts(data);
 

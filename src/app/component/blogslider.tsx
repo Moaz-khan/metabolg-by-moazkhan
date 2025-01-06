@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 interface BlogPost {
-  id: number; // Added id property
+  id: number;
   title: string;
   description: string;
   date: string;
@@ -23,13 +23,28 @@ export default function BlogSlider() {
 
   React.useEffect(() => {
     const fetchBlogPosts = async () => {
-      const response = await fetch("http://localhost:3000/api/blogs/1");
-      const data = await response.json();
-      setBlogPosts(data);
-      setIsLoading(false);
+      try {
+        const url =
+          process.env.NEXT_PUBLIC_API_URL ||
+          "http://localhost:3000/api/blogs/1"; // Relative URL for API
+        const response = await fetch(url, { next: { revalidate: 300 } });
+        const data = await response.json();
+        setBlogPosts(data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching blog posts:", error);
+        setIsLoading(false);
+      }
     };
 
     fetchBlogPosts();
+
+    // Re-fetch data every 30 seconds to keep it updated
+    const interval = setInterval(() => {
+      fetchBlogPosts();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   React.useEffect(() => {
@@ -67,7 +82,7 @@ export default function BlogSlider() {
       <div className="w-full max-w-7xl mx-auto relative">
         {blogPosts.map((post, index) => (
           <div
-            key={index}
+            key={post.id}
             className={`transition-opacity duration-700 ease-in-out ${
               currentIndex === index ? "opacity-100" : "opacity-0"
             }`}
