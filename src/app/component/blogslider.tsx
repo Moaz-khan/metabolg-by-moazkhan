@@ -25,8 +25,7 @@ export default function BlogSlider() {
     const fetchBlogPosts = async () => {
       try {
         const url =
-          process.env.NEXT_PUBLIC_API_URL ||
-          "http://localhost:3000/api/blogs/1"; // Relative URL for API
+          process.env.NEXT_PUBLIC_API_URL ||`/api/blogs/1`; // Relative URL for API
         const response = await fetch(url, { cache: "no-cache" });
         const data = await response.json();
         setBlogPosts(data);

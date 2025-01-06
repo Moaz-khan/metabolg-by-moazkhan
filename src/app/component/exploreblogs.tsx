@@ -25,7 +25,7 @@ export default function BlogCards() {
     async function fetchBlogPosts() {
       setLoading(true);
       const url =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/blogs/1";
+        process.env.NEXT_PUBLIC_API_URL || `/api/blogs/1`;
       const response = await fetch(url, { cache : "no-cache" }); // Revalidate every 5 minutes
       const data = await response.json();
       setBlogPosts(data.reverse());
