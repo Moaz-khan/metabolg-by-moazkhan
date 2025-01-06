@@ -88,7 +88,7 @@ export async function GET() {
 
     return NextResponse.json(allPosts);
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching posts: ", JSON.stringify(error));
     return NextResponse.error();
   }
 }
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error adding post: ", error);
+    console.error("Error adding post: ", JSON.stringify(error));
     return NextResponse.error();
   }
 }
