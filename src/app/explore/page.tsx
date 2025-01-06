@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import next from "next";
 
 interface BlogPost {
   id: string;
