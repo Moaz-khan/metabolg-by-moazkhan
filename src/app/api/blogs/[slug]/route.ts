@@ -9,15 +9,19 @@ function urlFor(source: SanityImageSource) {
   return builder.image(source);
 }
 
-// Portable Text ko plain text me convert karne ka function
-function extractPlainText(
-  description: { children: { text: string }[] }[],
-): string {
-  return description
-    .map((block) => block.children.map((child) => child.text).join(" "))
-    .join("\n");
+// Define the types for the blog posts
+interface BlogPost {
+  _id: string;
+  title: string;
+  description: { _type: string; children: { text: string }[] }[]; // Portable Text type
+  launchAt: string;
+  category: string;
+  image: SanityImageSource;
+  author: string;
+  authorImage: SanityImageSource;
 }
 
+// GET request to fetch blogs
 export async function GET() {
   try {
     // Sanity se blog posts fetch kar rahe hain
@@ -31,30 +35,19 @@ export async function GET() {
       author,
       authorImage
     }`;
-    const sanityPosts = await client.fetch(query);
+    const sanityPosts: BlogPost[] = await client.fetch(query);
 
     // Agar Sanity se posts milte hain, to unko blogPosts mein merge karte hain
-    const posts = sanityPosts.map(
-      (post: {
-        _id: string;
-        title: string;
-        description: { children: { text: string }[] }[];
-        launchAt: string;
-        category: string;
-        image: SanityImageSource;
-        author: string;
-        authorImage: SanityImageSource;
-      }) => ({
-        id: post._id,
-        title: post.title,
-        description: extractPlainText(post.description),
-        date: post.launchAt,
-        category: post.category,
-        image: urlFor(post.image).url(),
-        author: post.author,
-        authorImage: urlFor(post.authorImage).url(),
-      }),
-    );
+    const posts = sanityPosts.map((post) => ({
+      id: post._id,
+      title: post.title,
+      description: post.description, // Directly Portable Text
+      date: post.launchAt,
+      category: post.category,
+      image: urlFor(post.image).url(),
+      author: post.author,
+      authorImage: urlFor(post.authorImage).url(),
+    }));
 
     // Static posts ko bhi merge karna
     const staticPosts = [
@@ -69,17 +62,7 @@ export async function GET() {
         author: "Muhammad Maaz",
         authorImage: "/images/author.jpg",
       },
-      {
-        id: "2",
-        title: "Exploring AI in Design",
-        description:
-          "Discover the evolving role of AI in shaping design and creativity.",
-        date: "12.01.2024",
-        category: "TECHNOLOGY",
-        image: "/images/blogtwo.jpeg",
-        author: "Muhammad Maaz",
-        authorImage: "/images/author.jpg",
-      },
+      
       // Additional static posts...
     ];
 
@@ -93,39 +76,53 @@ export async function GET() {
   }
 }
 
-export async function POST(req: NextRequest) {
+// POST request to add a new blog post
+export async function POST(request: NextRequest) {
   try {
-    // Request se new post data ko extract kar rahe hain
-    const postData = await req.json();
+    // Request body se post ka data lena
+    const body = await request.json();
+    const {
+      title,
+      description,
+      launchAt,
+      category,
+      image,
+      author,
+      authorImage,
+    } = body;
 
-    // Sanity ke liye naya post data prepare kar rahe hain
+    // Sanity mein new blog post create karna
     const newPost = {
       _type: "blogs",
-      title: postData.title,
-      description: postData.description,
-      launchAt: postData.launchAt,
-      category: postData.category,
+      title,
+      description,
+      launchAt,
+      category,
       image: {
         _type: "image",
         asset: {
-          _ref: postData.image.assetRef,
+          _ref: image, // image ka Sanity asset reference
         },
       },
-      author: postData.author,
+      author,
       authorImage: {
         _type: "image",
         asset: {
-          _ref: postData.authorImage.assetRef,
+          _ref: authorImage, // author ka image reference
         },
       },
     };
 
-    // Sanity me naya post create kar rahe hain
-    const result = await client.create(newPost);
+    // Post ko Sanity mein create karte hain
+    const createdPost = await client.create(newPost);
 
-    return NextResponse.json(result);
+    // Response ko return karte hain
+    return NextResponse.json({
+      message: "Post created successfully",
+      post: createdPost,
+    });
   } catch (error) {
-    console.error("Error adding post: ", JSON.stringify(error));
+    console.error("Error creating post: ", JSON.stringify(error));
     return NextResponse.error();
   }
 }

@@ -1,13 +1,17 @@
-"use client";
+"use client"
 import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { PortableText } from "@portabletext/react";
+
+// Define correct type for description
+import { PortableTextBlock } from "@portabletext/react";
 
 interface BlogPost {
   id: number;
   title: string;
-  description: string;
+  description: PortableTextBlock[]; // Updated to handle PortableText
   date: string;
   category: string;
   image: string;
@@ -24,8 +28,7 @@ export default function BlogSlider() {
   React.useEffect(() => {
     const fetchBlogPosts = async () => {
       try {
-        const url =
-          process.env.NEXT_PUBLIC_API_URL ||`/api/blogs/1`; // Relative URL for API
+        const url = process.env.NEXT_PUBLIC_API_URL || `/api/blogs/1`; // Relative URL for API
         const response = await fetch(url, { cache: "no-cache" });
         const data = await response.json();
         setBlogPosts(data);
@@ -41,7 +44,7 @@ export default function BlogSlider() {
     // Re-fetch data every 30 seconds to keep it updated
     const interval = setInterval(() => {
       fetchBlogPosts();
-    }, 30000); // 30 seconds
+    }, 3000); // 3 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -82,9 +85,7 @@ export default function BlogSlider() {
         {blogPosts.map((post, index) => (
           <div
             key={post.id}
-            className={`transition-opacity duration-700 ease-in-out ${
-              currentIndex === index ? "opacity-100" : "opacity-0"
-            }`}
+            className={`transition-opacity duration-700 ease-in-out ${currentIndex === index ? "opacity-100" : "opacity-0"}`}
             style={{ display: currentIndex === index ? "block" : "none" }}>
             <div className="relative p-4 h-[60vh] sm:h-[70vh] md:h-[80vh] lg:h-[90vh]">
               <div className="absolute inset-0">
@@ -102,16 +103,15 @@ export default function BlogSlider() {
                 <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg"></div>
                 <Card className="relative z-10 w-full bg-transparent border-none">
                   <CardContent className="flex flex-col justify-start items-start p-6 text-white">
-                    <div className="text-xs font-bold py-2 px-4 rounded-lg mb-4 bg-opacity-60">
+                    <div className="text-base font-bold py-2 px-4 rounded-lg mb-4 bg-opacity-60 uppercase">
                       {post.category}
                     </div>
                     <h2 className="text-3xl font-semibold mb-2">
                       {post.title}
                     </h2>
-                    <p
-                      className="text-sm mb-4 line-clamp-3"
-                      title={post.description}>
-                      {post.description}
+                    <p className="text-xs mb-4 line-clamp-2">
+                      {/* Directly render PortableText here without title attribute */}
+                      <PortableText value={post.description} />
                     </p>
                     <div className="flex items-center mt-4">
                       <Image

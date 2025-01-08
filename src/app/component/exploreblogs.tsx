@@ -2,13 +2,14 @@
 import { useEffect, useState } from "react";
 import { FaAngleLeft, FaAngleRight } from "react-icons/fa";
 import { useRouter } from "next/navigation";
+import { PortableText } from "@portabletext/react";
 
 interface Post {
   id: string;
   title: string;
   image: string;
   date: string;
-  description: string;
+  description: { _type: string; children: { text: string }[] }[]; // Updated type for PortableText
   author: string;
   category: string;
 }
@@ -17,25 +18,43 @@ export default function BlogCards() {
   const [blogPosts, setBlogPosts] = useState<Post[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [postsPerPage, setPostsPerPage] = useState(1); // Default 1 post per page on mobile
   const router = useRouter();
-
-  const postsPerPage = 3;
 
   useEffect(() => {
     async function fetchBlogPosts() {
       setLoading(true);
-      const url =
-        process.env.NEXT_PUBLIC_API_URL || `/api/blogs/1`;
-      const response = await fetch(url, { cache : "no-cache" }); // Revalidate every 5 minutes
+      const url = process.env.NEXT_PUBLIC_API_URL || `/api/blogs/1`;
+      const response = await fetch(url, { cache: "no-cache" });
       const data = await response.json();
-      setBlogPosts(data.reverse());
+      setBlogPosts(data.reverse()); // Reverse to show latest posts first
       setLoading(false);
     }
     fetchBlogPosts();
   }, []);
 
+  // Adjust posts per page based on window size
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 640) {
+        setPostsPerPage(1); // Mobile
+      } else if (window.innerWidth <= 1024) {
+        setPostsPerPage(2); // Tablet
+      } else {
+        setPostsPerPage(3); // Desktop
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Set initial postsPerPage on component mount
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   const handleNext = () => {
-    if (currentIndex * postsPerPage < blogPosts.length) {
+    if ((currentIndex + 1) * postsPerPage < blogPosts.length) {
       setCurrentIndex(currentIndex + 1);
     }
   };
@@ -46,7 +65,11 @@ export default function BlogCards() {
     }
   };
 
-  const postsToShow = blogPosts.slice(0, (currentIndex + 1) * postsPerPage);
+  // Slice the posts for current page
+  const postsToShow = blogPosts.slice(
+    currentIndex * postsPerPage,
+    (currentIndex + 1) * postsPerPage,
+  );
 
   if (loading) {
     return (
@@ -62,37 +85,44 @@ export default function BlogCards() {
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Recent Posts</h2>
 
       <div className="relative overflow-hidden">
-        <div
-          className="flex transition-transform duration-300"
-          style={{ transform: `translateX(-${currentIndex * 100}%)` }}>
+        <div className="flex flex-wrap justify-start transition-transform duration-300">
           {postsToShow.map((post) => (
-            <div key={post.id} className="w-full sm:w-1/3 p-2 flex-shrink-0">
-              <div className="relative h-[450px] sm:h-[565px] bg-white rounded-lg shadow-lg">
+            <div
+              key={post.id}
+              className="w-full sm:w-1/2 md:w-1/3 p-4 flex-shrink-0">
+              <div className="relative bg-white rounded-lg shadow-lg hover:shadow-2xl transition-shadow duration-300 transform hover:scale-105">
                 <div
-                  className="w-full h-[220px] sm:h-[280px] bg-gray-400 rounded-t-lg"
+                  className="w-full h-[250px] sm:h-[280px] md:h-[320px] bg-gray-400 rounded-t-lg bg-cover bg-center object-cover"
                   style={{
                     backgroundImage: `url(${post.image})`,
-                    backgroundSize: "cover",
                   }}></div>
-                <div className="absolute top-[250px] sm:top-[300px] left-[10px] text-lg font-semibold text-gray-700">
-                  {post.title}
-                </div>
-                <div className="absolute top-[310px] sm:top-[355px] left-[10px] text-sm text-gray-500">
-                  {post.date}
-                </div>
-                <div className="absolute top-[340px] sm:top-[385px] left-[10px] text-sm text-gray-500 line-clamp-2">
-                  {post.description}
-                </div>
-                <button
-                  onClick={() => router.push(`/explore?blogId=${post.id}`)}
-                  className="absolute bottom-[40px] sm:bottom-[50px] left-[10px] text-sm font-semibold text-blue-500">
-                  Read More
-                </button>
-                <div className="absolute bottom-[10px] left-[10px] text-xs font-semibold text-gray-700">
-                  By {post.author}
-                </div>
-                <div className="absolute bottom-[10px] right-[10px] w-12 h-5 bg-white bg-opacity-40 rounded-lg text-xs text-center text-white font-semibold">
-                  {post.category}
+
+                {/* Content Wrapper with fixed height */}
+                <div className="p-4">
+                  <div className="text-lg font-semibold text-gray-800 truncate">
+                    {post.title}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-2">{post.date}</div>
+                  <div className="text-sm text-gray-500 line-clamp-3 mt-2">
+                    <PortableText value={post.description} />
+                  </div>
+
+                  {/* Buttons and Info */}
+                  <div className="mt-4 flex justify-between items-center">
+                    <button
+                      onClick={() => router.push(`/explore?blogId=${post.id}`)}
+                      className="text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">
+                      Read More
+                    </button>
+                    <div className="flex items-center">
+                      <div className="text-xs font-semibold text-gray-700">
+                        By {post.author}
+                      </div>
+                      <div className="ml-2 w-36 h-6 bg-blue-500 rounded-lg text-xs text-center text-white font-semibold flex justify-center items-center">
+                        {post.category}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -102,6 +132,7 @@ export default function BlogCards() {
         <br />
         <br />
 
+        {/* Pagination Controls */}
         <div className="absolute bottom-0 left-0 right-0 flex justify-center space-x-4 pb-4">
           <button
             onClick={handlePrevious}
@@ -113,9 +144,9 @@ export default function BlogCards() {
           </button>
           <button
             onClick={handleNext}
-            disabled={currentIndex * postsPerPage >= blogPosts.length}
+            disabled={(currentIndex + 1) * postsPerPage >= blogPosts.length}
             className={`bg-gray-800 text-white p-2 rounded-full shadow-lg ${
-              currentIndex * postsPerPage >= blogPosts.length
+              (currentIndex + 1) * postsPerPage >= blogPosts.length
                 ? "opacity-50 cursor-not-allowed"
                 : ""
             }`}>

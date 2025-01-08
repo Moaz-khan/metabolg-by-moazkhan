@@ -1,16 +1,20 @@
 "use client";
-import * as React from "react";
-import { Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  PortableText,
+  PortableTextBlock,
+  PortableTextComponents,
+} from "@portabletext/react";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import useQueryParams from "../hooks/useQueryParams"; // Custom hook import
 
 interface BlogPost {
   id: string;
   title: string;
-  description: string;
+  description: PortableTextBlock[];
   date: string;
   category: string;
   image: string;
@@ -18,79 +22,27 @@ interface BlogPost {
   authorImage: string;
 }
 
-export default function ExploreBlogs() {
-  const [blogPosts, setBlogPosts] = React.useState<BlogPost[]>([]);
-  const [selectedBlog, setSelectedBlog] = React.useState<BlogPost | null>(null);
-  const [comment, setComment] = React.useState<string>("");
-  const [name, setName] = React.useState<string>("");
-  const [comments, setComments] = React.useState<
-    { name: string; comment: string }[]
-  >([]);
-  const router = useRouter();
-
-  // Suspense ko useSearchParams ke sath wrap karein
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ExploreBlogsContent
-        blogPosts={blogPosts}
-        selectedBlog={selectedBlog}
-        setSelectedBlog={setSelectedBlog}
-        setBlogPosts={setBlogPosts}
-        comment={comment}
-        setComment={setComment}
-        name={name}
-        setName={setName}
-        comments={comments}
-        setComments={setComments}
-        router={router}
-      />
-    </Suspense>
+const ExploreBlogs = () => {
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
+  const [comment, setComment] = useState<string>("");
+  const [name, setName] = useState<string>("");
+  const [comments, setComments] = useState<{ name: string; comment: string }[]>(
+    [],
   );
-}
 
-function ExploreBlogsContent({
-  blogPosts,
-  selectedBlog,
-  setSelectedBlog,
-  setBlogPosts,
-  comment,
-  setComment,
-  name,
-  setName,
-  comments,
-  setComments,
-  router,
-}: {
-  blogPosts: BlogPost[];
-  selectedBlog: BlogPost | null;
-  setSelectedBlog: React.Dispatch<React.SetStateAction<BlogPost | null>>;
-  setBlogPosts: React.Dispatch<React.SetStateAction<BlogPost[]>>;
-  comment: string;
-  setComment: React.Dispatch<React.SetStateAction<string>>;
-  name: string;
-  setName: React.Dispatch<React.SetStateAction<string>>;
-  comments: { name: string; comment: string }[];
-  setComments: React.Dispatch<
-    React.SetStateAction<{ name: string; comment: string }[]>
-  >;
-  router: ReturnType<typeof useRouter>;
-}) {
-  const searchParams = useSearchParams();
+  const [currentBlogId, setCurrentBlogId] = useQueryParams("blogId");
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchBlogPosts = async () => {
       try {
-        const url =
-          process.env.NEXT_PUBLIC_API_URL ||
-          `/api/blogs/1`;
+        const url = process.env.NEXT_PUBLIC_API_URL || "/api/blogs/1";
         const response = await fetch(url, { cache: "no-cache" });
-        const data = await response.json();
+        const data: BlogPost[] = await response.json();
         setBlogPosts(data);
 
-        // Check for blogId in the URL and select the corresponding blog
-        const blogId = searchParams.get("blogId");
-        if (blogId) {
-          const selected = data.find((post: BlogPost) => post.id === blogId);
+        if (currentBlogId) {
+          const selected = data.find((post) => post.id === currentBlogId);
           setSelectedBlog(selected || null);
         } else if (data.length > 0) {
           setSelectedBlog(data[0]);
@@ -101,50 +53,71 @@ function ExploreBlogsContent({
     };
 
     fetchBlogPosts();
-  }, [searchParams, setBlogPosts, setSelectedBlog]);
+  }, [currentBlogId]);
 
   const handleCommentSubmit = () => {
     if (comment && name) {
-      const newComment = { name, comment };
-
-      setComments((prevComments) => [...prevComments, newComment]);
-
+      setComments((prevComments) => [...prevComments, { name, comment }]);
       setComment("");
       setName("");
     }
   };
 
+  const customComponents: PortableTextComponents = {
+    block: {
+      h1: ({ children }) => (
+        <h1 className="text-3xl font-extrabold my-6">{children}</h1>
+      ),
+      normal: ({ children }) => <p className="text-base my-2">{children}</p>,
+    },
+    marks: {
+      strong: ({ children }) => (
+        <strong className="font-bold">{children}</strong>
+      ),
+      em: ({ children }) => <em className="italic">{children}</em>,
+    },
+    list: {
+      bullet: ({ children }) => <ul className="list-disc pl-5">{children}</ul>,
+    },
+    listItem: {
+      bullet: ({ children }) => <li>{children}</li>,
+    },
+  };
+
+  const handleBlogSelect = (blogId: string) => {
+    setCurrentBlogId(blogId);
+    const selected = blogPosts.find((post) => post.id === blogId);
+    setSelectedBlog(selected || null);
+  };
+
   return (
     <section className="flex flex-col md:flex-row pt-16 w-full max-w-7xl mx-auto">
-      {/* Left Section: Blog Detail */}
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-4 md:p-6">
         {selectedBlog ? (
           <Card className="mb-6">
             <CardContent>
-              <div className="relative mb-6">
-                <Image
-                  src={selectedBlog.image}
-                  alt={selectedBlog.title}
-                  width={600}
-                  height={400}
-                  className="rounded-lg object-cover w-full"
-                />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-semibold mb-2">
+              <Image
+                src={selectedBlog.image}
+                alt={selectedBlog.title}
+                width={600}
+                height={400}
+                className="rounded-lg object-cover w-full"
+              />
+              <h2 className="text-xl md:text-2xl font-semibold my-4">
                 {selectedBlog.title}
               </h2>
-              <div className="text-xs font-bold py-2 px-4 rounded-lg mb-4 bg-opacity-60">
-                {selectedBlog.category}
+              <div className="text-sm md:text-base mb-4">
+                <PortableText
+                  value={selectedBlog.description}
+                  components={customComponents}
+                />
               </div>
-              <p className="text-sm sm:text-base mb-4">
-                {selectedBlog.description}
-              </p>
               <div className="flex items-center mt-4 mb-6">
                 <Image
                   src={selectedBlog.authorImage}
                   alt={selectedBlog.author}
-                  width={50}
-                  height={50}
+                  width={40}
+                  height={40}
                   className="rounded-full mr-3"
                 />
                 <span className="text-sm font-medium">
@@ -152,42 +125,32 @@ function ExploreBlogsContent({
                 </span>
               </div>
               <div className="text-xs text-gray-500">{selectedBlog.date}</div>
-
-              {/* Comment Section */}
               <div className="mt-6">
                 <h4 className="text-lg font-semibold mb-2">Comments</h4>
-                <div>
-                  {comments.map((comment, index) => (
-                    <div
-                      key={index}
-                      className="mb-4 p-4 bg-gray-100 rounded-lg">
-                      <strong>{comment.name}</strong>
-                      <p className="text-sm">{comment.comment}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Comment Form */}
-                <div className="mt-4">
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your Name"
-                    className="w-full mb-2 p-2 border rounded-lg"
-                  />
-                  <textarea
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="Your Comment"
-                    className="w-full mb-2 p-2 border rounded-lg"
-                  />
-                  <button
-                    onClick={handleCommentSubmit}
-                    className="bg-blue-500 text-white py-2 px-4 rounded-lg">
-                    Submit Comment
-                  </button>
-                </div>
+                {comments.map((comment, index) => (
+                  <div key={index} className="mb-4 p-4 bg-gray-100 rounded-lg">
+                    <strong>{comment.name}</strong>
+                    <p className="text-sm">{comment.comment}</p>
+                  </div>
+                ))}
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your Name"
+                  className="w-full mb-2 p-2 border rounded-lg"
+                />
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Your Comment"
+                  className="w-full mb-2 p-2 border rounded-lg"
+                />
+                <button
+                  onClick={handleCommentSubmit}
+                  className="bg-blue-500 text-white py-2 px-4 rounded-lg">
+                  Submit Comment
+                </button>
               </div>
             </CardContent>
           </Card>
@@ -196,37 +159,39 @@ function ExploreBlogsContent({
         )}
       </div>
 
-      {/* Right Section: Blog List with ScrollArea */}
-      <div className="flex-1 p-6">
-        <h3 className="text-xl sm:text-2xl font-semibold mb-4">
-          Explore Blogs
-        </h3>
-        <ScrollArea className="h-[80vh] w-full rounded-md border">
+      <div className="flex-1 p-4 md:p-6">
+        <h3 className="text-lg md:text-xl font-semibold mb-4">Explore Blogs</h3>
+        <ScrollArea className="h-[60vh] md:h-[80vh] w-full rounded-md border">
           <div className="space-y-4 p-4">
-            {blogPosts.map((post: BlogPost, index) => (
+            {blogPosts.map((post) => (
               <div
-                key={index}
-                onClick={() => router.push(`/explore?blogId=${post.id}`)}
+                key={post.id}
+                onClick={() => handleBlogSelect(post.id)}
                 className="cursor-pointer hover:bg-gray-200 p-4 rounded-lg shadow-md transition duration-200 ease-in-out">
                 <div className="flex items-center space-x-4">
                   <Image
                     src={post.image}
                     alt={post.title}
-                    width={100}
-                    height={100}
+                    width={80}
+                    height={80}
                     className="rounded-md object-cover"
                   />
                   <div>
-                    <h4 className="text-lg font-semibold">{post.title}</h4>
-                    <p className="text-sm sm:text-base text-gray-600 line-clamp-2">
-                      {post.description}
-                    </p>
+                    <h4 className="text-sm md:text-lg font-semibold">
+                      {post.title}
+                    </h4>
+                    <div className="text-xs md:text-sm text-gray-600 line-clamp-2">
+                      <PortableText
+                        value={post.description}
+                        components={customComponents}
+                      />
+                    </div>
                     <div className="flex items-center mt-2">
                       <Image
                         src={post.authorImage}
                         alt={post.author}
-                        width={30}
-                        height={30}
+                        width={24}
+                        height={24}
                         className="rounded-full mr-2"
                       />
                       <span className="text-xs">{post.author}</span>
@@ -241,4 +206,6 @@ function ExploreBlogsContent({
       </div>
     </section>
   );
-}
+};
+
+export default ExploreBlogs;
